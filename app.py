@@ -10,6 +10,9 @@ st.set_page_config(page_title="EcoGuardian AI", layout="wide")
 st.title("🌍 EcoGuardian AI")
 st.subheader("AI Multi-Agent Sustainability Monitoring Dashboard")
 
+if "result_df" not in st.session_state:
+    st.session_state.result_df = None
+
 uploaded_file = st.file_uploader("Upload environmental CSV file", type=["csv"])
 
 uploaded_df = None
@@ -17,10 +20,12 @@ if uploaded_file is not None:
     uploaded_df = pd.read_csv(uploaded_file)
 
 if st.button("Run Multi-Agent Analysis"):
-    result_df = coordinator_run(uploaded_df)
-
+    st.session_state.result_df = coordinator_run(uploaded_df)
     st.success("Analysis completed successfully")
 
+result_df = st.session_state.result_df
+
+if result_df is not None:
     col1, col2, col3 = st.columns(3)
     col1.metric("Sites", len(result_df))
     col2.metric("High Risk Sites", int((result_df["risk_level"] == "High").sum()))
@@ -28,6 +33,7 @@ if st.button("Run Multi-Agent Analysis"):
 
     st.markdown("## Results Table")
     st.dataframe(result_df, width="stretch")
+
     st.markdown("## Risk by Site")
     fig = px.bar(result_df, x="site", y="risk_score", color="risk_level")
     st.plotly_chart(fig, width="stretch")
@@ -43,6 +49,7 @@ if st.button("Run Multi-Agent Analysis"):
 
     st.markdown("## Send Alerts")
     webhook_url = st.secrets.get("N8N_WEBHOOK_URL", "")
+    st.write("Webhook URL loaded:", bool(webhook_url))
 
     if st.button("Send High Risk Alerts to n8n"):
         if not webhook_url:
@@ -56,10 +63,15 @@ if st.button("Run Multi-Agent Analysis"):
                 "high_risk_sites": alerts.to_dict(orient="records")
             }
 
+            st.write("Payload being sent:")
+            st.json(payload)
+
             result = send_to_n8n(payload, webhook_url)
+
+            st.write("Response status:", result["status_code"])
+            st.write("Response text:", result["response_text"])
 
             if result["status_code"] in [200, 201]:
                 st.success("Data sent to n8n successfully")
-                st.write(result["response_text"])
             else:
                 st.error(f"Failed to send data to n8n: {result['response_text']}")
