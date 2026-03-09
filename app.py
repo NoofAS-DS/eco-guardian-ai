@@ -27,11 +27,10 @@ if st.button("Run Multi-Agent Analysis"):
     col3.metric("Average Risk Score", round(result_df["risk_score"].mean(), 1))
 
     st.markdown("## Results Table")
-    st.dataframe(result_df, use_container_width=True)
-
+    st.dataframe(result_df, width="stretch")
     st.markdown("## Risk by Site")
     fig = px.bar(result_df, x="site", y="risk_score", color="risk_level")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.markdown("## Recommendations")
     for _, row in result_df.iterrows():
