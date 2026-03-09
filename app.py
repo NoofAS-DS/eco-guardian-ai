@@ -14,40 +14,35 @@ uploaded_file = st.file_uploader("Upload environmental CSV file", type=["csv"])
 uploaded_df = None
 if uploaded_file is not None:
     uploaded_df = pd.read_csv(uploaded_file)
+    if st.button("Run Multi-Agent Analysis"):
 
-if st.button("Run Multi-Agent Analysis"):
     result_df = coordinator_run(uploaded_df)
 
     st.success("Analysis completed successfully")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Sites", len(result_df))
-    col2.metric("High Risk Sites", int((result_df["risk_level"] == "High").sum()))
-    col3.metric("Average Risk Score", round(result_df["risk_score"].mean(), 1))
+    st.dataframe(result_df)
 
-    st.markdown("## Results Table")
-    st.dataframe(result_df, use_container_width=True)
-webhook_url = st.secrets.get("N8N_WEBHOOK_URL", "")
+    webhook_url = st.secrets.get("N8N_WEBHOOK_URL", "")
 
-if st.button("Send High Risk Alerts to n8n"):
-    if not webhook_url:
-        st.error("N8N_WEBHOOK_URL is missing in secrets")
-    else:
-        alerts = result_df[result_df["send_alert"] == True]
-
-        payload = {
-            "project": "EcoGuardian AI",
-            "total_sites": len(result_df),
-            "high_risk_sites": alerts.to_dict(orient="records")
-        }
-
-        result = send_to_n8n(payload, webhook_url)
-
-        if result["status_code"] in [200, 201]:
-            st.success("Data sent to n8n successfully")
-            st.write(result["response_text"])
+    if st.button("Send High Risk Alerts to n8n"):
+        if not webhook_url:
+            st.error("N8N_WEBHOOK_URL is missing in secrets")
         else:
-            st.error(f"Failed to send data to n8n: {result['response_text']}")
+            alerts = result_df[result_df["send_alert"] == True]
+
+            payload = {
+                "project": "EcoGuardian AI",
+                "total_sites": len(result_df),
+                "high_risk_sites": alerts.to_dict(orient="records")
+            }
+
+            result = send_to_n8n(payload, webhook_url)
+
+            if result["status_code"] in [200, 201]:
+                st.success("Data sent to n8n successfully")
+            else:
+                st.error("Failed to send data")
+    
     st.markdown("## Risk by Site")
     fig = px.bar(result_df, x="site", y="risk_score", color="risk_level")
     st.plotly_chart(fig, use_container_width=True)
