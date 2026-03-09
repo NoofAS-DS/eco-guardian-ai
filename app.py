@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 from agents.coordinator import coordinator_run
-
+from utils.n8n_utils import send_to_n8n
 st.set_page_config(page_title="EcoGuardian AI", layout="wide")
 
 st.title("🌍 EcoGuardian AI")
